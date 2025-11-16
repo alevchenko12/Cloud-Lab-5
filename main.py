@@ -1,53 +1,39 @@
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-import os
 
-# Створюємо FastAPI-застосунок
 app = FastAPI()
 
-# Додаємо CORS, щоб до сервісу можна було звертатися з будь-якого фронтенду
+# Дозволяємо CORS (щоб до сервісу можна було звертатись з браузера/інших доменів)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],          # дозволити всі домени
+    allow_origins=["*"],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Content-Type"],
 )
 
-# Один вхідний HTTP-ендпоінт "/" на всі методи
+
 @app.api_route("/", methods=["GET", "POST", "OPTIONS"])
 async def http_entry(request: Request):
-    # Обробка preflight-запитів від браузера (CORS)
+    # Обробка preflight-запитів
     if request.method == "OPTIONS":
         return Response(status_code=204)
 
-    # -------- Витягуємо параметр "name" з GET або POST --------
+    # Значення за замовчуванням
     name = "world"
 
-    # 1) Якщо прийшов GET-запит з query-параметром ?name=...
-    if request.query_params.get("name"):
+    # 1) GET /?name=...
+    if "name" in request.query_params:
         name = request.query_params["name"]
-    else:
-        # 2) Якщо POST — пробуємо прочитати JSON-тіло
-        if request.method == "POST":
-            try:
-                body = await request.json()
-            except Exception:
-                body = {}
 
-            # Якщо тіло — dict і є ключ "name"
-            if isinstance(body, dict) and body.get("name"):
-                name = body["name"]
+    # 2) POST JSON: {"name": "Nastia"}
+    elif request.method == "POST":
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
 
-    # -------- Тут має бути твоя логіка з Лаби 4 --------
-    # Приклад:
-    # result = your_lab4_function(name)
-    #
-    # Поки що для прикладу зробимо просту відповідь:
+        if isinstance(body, dict) and "name" in body:
+            name = body["name"]
 
-    result = {
-        "hello": name,
-        "runtime": "python",
-        "my_test_env": os.getenv("TEST_ENV", "unknown"),
-    }
-
-    return result
+    # Точний формат відповіді:
+    return {"hello": name}
